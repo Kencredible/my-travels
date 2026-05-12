@@ -110,6 +110,47 @@
       pointer-events: all;
     }
 
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .panel-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #c8d8ff;
+      letter-spacing: 0.04em;
+    }
+
+    .share-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(37,99,235,0.18);
+      border: 1px solid rgba(37,99,235,0.35);
+      border-radius: 20px;
+      padding: 5px 12px;
+      color: #7eb8ff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .share-btn:hover {
+      background: rgba(37,99,235,0.3);
+      border-color: rgba(37,99,235,0.6);
+      color: #c8d8ff;
+    }
+
+    .share-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .metrics-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -498,17 +539,18 @@
     /* ── Country zoom reset ── */
     #reset-view {
       position: fixed;
-      bottom: 32px;
-      left: 32px;
+      top: 52px;
+      left: 24px;
       z-index: 200;
-      background: rgba(15,25,50,0.9);
+      background: rgba(15,25,50,0.85);
       border: 1px solid rgba(80,110,200,0.3);
       color: #7eb8ff;
-      border-radius: 10px;
-      padding: 10px 18px;
-      font-size: 0.85rem;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
       cursor: pointer;
       display: none;
+      backdrop-filter: blur(10px);
       transition: all 0.15s;
     }
 
@@ -810,7 +852,7 @@
       #hint { display: none; }
 
       /* Reset view */
-      #reset-view { bottom: 20px; left: 16px; font-size: 0.78rem; padding: 8px 14px; }
+      #reset-view { top: 50px; left: 14px; }
 
       /* Empty state card */
       .empty-card { padding: 28px 24px; }
@@ -846,6 +888,15 @@
 
 <!-- Stats dashboard panel -->
 <div id="stats-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Your travel history</div>
+    </div>
+    <button class="share-btn" onclick="shareStats()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share
+    </button>
+  </div>
   <div class="metrics-grid">
     <div class="metric-card accent-blue">
       <span class="metric-icon">✈</span>
@@ -905,7 +956,7 @@
 <div id="empty-state">
   <div class="empty-card">
     <span class="globe-icon">🌍</span>
-    <h2>Your passport awaits</h2>
+    <h2>Record your travel history</h2>
     <p>Add your first trip and watch the globe light up with your travels. Each route becomes an animated arc you can explore.</p>
     <button class="btn-start" id="empty-add-btn">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -991,6 +1042,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/globe.gl/dist/globe.gl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 // ─────────────────────────────────────────────
 // DATA
@@ -1688,6 +1740,83 @@ function updateStats() {
   } else {
     document.getElementById('m-most-visited-count').textContent = '—';
     document.getElementById('m-most-visited-name').textContent  = '—';
+  }
+}
+
+async function shareStats() {
+  const btn = document.querySelector('.share-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  const metrics = [
+    { icon: '✈', value: document.getElementById('m-trips').textContent,             label: 'Flights',        color: '#60a5fa' },
+    { icon: '🌍', value: document.getElementById('m-countries').textContent,         label: 'Countries',      color: '#2dd4bf' },
+    { icon: '🗓', value: document.getElementById('m-days').textContent,              label: 'Days Away',      color: '#fbbf24' },
+    { icon: '🌐', value: document.getElementById('m-continents').textContent,        label: 'Continents',     color: '#c084fc' },
+    { icon: '📏', value: document.getElementById('m-km').textContent,               label: 'KM Flown',       color: '#4ade80' },
+    { icon: '⏱', value: document.getElementById('m-hours').textContent,             label: 'Hours in Air',   color: '#38bdf8' },
+    { icon: '🏆', value: document.getElementById('m-longest-km').textContent,       label: 'Longest Flight', color: '#fb7185',
+      sub: document.getElementById('m-longest-route').textContent },
+    { icon: '📍', value: document.getElementById('m-most-visited-count').textContent, label: 'Most Visited',  color: '#818cf8',
+      sub: document.getElementById('m-most-visited-name').textContent },
+  ];
+
+  const card = document.createElement('div');
+  card.style.cssText = `
+    position:fixed; left:-9999px; top:0;
+    width:360px; padding:24px;
+    background:#070d1e; border-radius:20px;
+    font-family:'Segoe UI',system-ui,sans-serif;
+  `;
+
+  card.innerHTML = `
+    <div style="margin-bottom:18px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#c8d8ff;letter-spacing:0.08em;text-transform:uppercase">✈ My Travels</div>
+        <div style="font-size:0.68rem;color:#4a6aaa;margin-top:3px;text-transform:uppercase;letter-spacing:0.1em">Your travel history</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${metrics.map(m => `
+        <div style="background:#0d1830;border:1px solid rgba(80,110,200,0.2);border-radius:12px;padding:12px 14px">
+          <span style="font-size:1rem;display:block;margin-bottom:4px">${m.icon}</span>
+          <span style="font-size:1.4rem;font-weight:800;color:${m.color};display:block;line-height:1">${m.value}</span>
+          <span style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.08em;color:#4a6aaa;display:block;margin-top:4px">${m.label}</span>
+          ${m.sub && m.sub !== '—' ? `<span style="font-size:0.68rem;color:#3a5080;display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.sub}</span>` : ''}
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:14px;font-size:0.65rem;color:#2a3a6a;text-align:center;letter-spacing:0.06em">my-travels.vercel.app</div>
+  `;
+
+  document.body.appendChild(card);
+
+  try {
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#070d1e',
+      scale: 2,
+      useCORS: true,
+      logging: false
+    });
+
+    canvas.toBlob(async blob => {
+      const file = new File([blob], 'my-travels-stats.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: 'My Travels', files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'my-travels-stats.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    });
+  } catch (e) {
+    console.error('Share failed:', e);
+  } finally {
+    document.body.removeChild(card);
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share`;
   }
 }
 
