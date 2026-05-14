@@ -843,6 +843,28 @@
       100% { background-position: -200% 0; }
     }
 
+    /* ── Export passport button ── */
+    .export-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(196,155,70,0.15);
+      border: 1px solid rgba(196,155,70,0.35);
+      border-radius: 20px;
+      padding: 5px 12px;
+      color: #c49b46;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .export-btn:hover {
+      background: rgba(196,155,70,0.28);
+      border-color: rgba(196,155,70,0.6);
+      color: #e8c96e;
+    }
+
     /* ── Topbar right cluster ── */
     .topbar-right {
       display: flex;
@@ -1241,10 +1263,16 @@
     <div>
       <div class="panel-title">Your travel history</div>
     </div>
-    <button class="share-btn" onclick="shareStats()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      Share
-    </button>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="export-btn" onclick="exportPassport()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h6M3 15h6"/></svg>
+        Passport
+      </button>
+      <button class="share-btn" onclick="shareStats()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+    </div>
   </div>
   <div class="metrics-grid">
     <div class="metric-card accent-blue">
@@ -1387,6 +1415,11 @@
 
     <datalist id="city-list"></datalist>
 
+    <div class="form-group">
+      <label>Trip name</label>
+      <input type="text" id="f-label" placeholder="e.g. Summer holiday, Work trip…" />
+    </div>
+
     <div class="form-row">
       <div class="form-group">
         <label>Departure date</label>
@@ -1396,11 +1429,6 @@
         <label>Return date</label>
         <input type="date" id="f-date-to" />
       </div>
-    </div>
-
-    <div class="form-group">
-      <label>Trip name / label</label>
-      <input type="text" id="f-label" placeholder="e.g. Summer holiday, Work trip…" />
     </div>
 
     <div class="form-group">
@@ -1422,6 +1450,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/globe.gl/dist/globe.gl.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 // ─────────────────────────────────────────────
 // CONFIG
@@ -2942,6 +2971,290 @@ function easeInOut(t) {
   return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
 }
 
+
+// ─────────────────────────────────────────────
+// EXPORT PASSPORT PDF
+// ─────────────────────────────────────────────
+async function exportPassport() {
+  if (trips.length === 0) { alert('Add some trips first!'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
+  const W = 148, H = 210;
+
+  function hexRgb(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+  }
+  function darkColor(r,g,b,f=0.42) {
+    return [Math.round(r*f), Math.round(g*f), Math.round(b*f)];
+  }
+  function drawGlobe(cx, cy, r, strokeColor, lw=0.5) {
+    doc.setDrawColor(...strokeColor);
+    doc.setLineWidth(lw);
+    doc.circle(cx, cy, r, 'S');
+    doc.setLineWidth(lw * 0.55);
+    doc.circle(cx, cy, r * 0.72, 'S');
+    doc.ellipse(cx, cy, r * 0.42, r, 'S');
+    doc.ellipse(cx, cy, r, r * 0.42, 'S');
+    doc.line(cx - r, cy, cx + r, cy);
+    doc.line(cx, cy - r, cx, cy + r);
+  }
+  function gridPattern() {
+    doc.setDrawColor(255,255,255);
+    doc.setLineWidth(0.03);
+    for (let x = 0; x <= W; x += 8) doc.line(x, 0, x, H);
+    for (let y = 0; y <= H; y += 8) doc.line(0, y, W, y);
+  }
+  function sectionLabel(text, x, y) {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(4.5);
+    doc.setTextColor(140,125,95);
+    doc.setCharSpace(1.2);
+    doc.text(text.toUpperCase(), x, y);
+    doc.setCharSpace(0);
+  }
+  function fieldValue(text, x, y, size=8) {
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(size);
+    doc.setTextColor(26,20,8);
+    doc.text(text, x, y);
+  }
+
+  // ── FRONT COVER ──
+  doc.setFillColor(13,23,51); doc.rect(0,0,W,H,'F');
+  gridPattern();
+  doc.setDrawColor(196,155,70); doc.setLineWidth(0.8);
+  doc.rect(5,5,W-10,H-10,'S');
+  doc.setLineWidth(0.25); doc.rect(8.5,8.5,W-17,H-17,'S');
+  doc.setFont('helvetica','normal'); doc.setFontSize(5);
+  doc.setTextColor(120,90,35); doc.setCharSpace(3);
+  doc.text('PERSONAL TRAVEL DOCUMENT', W/2, 27, {align:'center'});
+  doc.setCharSpace(0);
+  drawGlobe(W/2, 82, 19, [196,155,70], 0.65);
+  doc.setFont('helvetica','normal'); doc.setFontSize(5.5);
+  doc.setTextColor(100,78,30); doc.setCharSpace(2.5);
+  doc.text('TRAVEL DOCUMENT', W/2, 113, {align:'center'});
+  doc.setCharSpace(0);
+  doc.setFont('helvetica','bold'); doc.setFontSize(26);
+  doc.setTextColor(196,155,70); doc.setCharSpace(2.5);
+  doc.text('PASSPORT', W/2, 129, {align:'center'});
+  doc.setCharSpace(0);
+  doc.setDrawColor(196,155,70); doc.setLineWidth(0.4);
+  doc.line(W/2-30,133,W/2+30,133);
+  doc.setLineWidth(0.15); doc.line(W/2-30,135.5,W/2+30,135.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.setTextColor(150,115,45); doc.setCharSpace(2);
+  doc.text('MY TRAVELS', W/2, 145, {align:'center'});
+  doc.setCharSpace(0);
+  doc.setFontSize(4.5); doc.setTextColor(70,55,25);
+  doc.text('PERSONAL · NON-TRANSFERABLE · DIGITAL RECORD', W/2, H-16, {align:'center'});
+
+  // ── INSIDE COVER ──
+  doc.addPage();
+  doc.setFillColor(13,23,51); doc.rect(0,0,W,H,'F');
+  doc.setDrawColor(25,45,90); doc.setLineWidth(0.4);
+  drawGlobe(W/2, H/2, 42, [25,45,90], 0.4);
+  doc.setFont('helvetica','normal'); doc.setFontSize(5);
+  doc.setTextColor(40,65,110); doc.setCharSpace(2);
+  doc.text('MY TRAVELS · PERSONAL RECORD', W/2, H-16, {align:'center'});
+  doc.setCharSpace(0);
+
+  // ── BIO / STATS PAGE ──
+  doc.addPage();
+  doc.setFillColor(244,239,228); doc.rect(0,0,W,H,'F');
+  doc.setFillColor(13,23,51); doc.rect(0,0,W,18,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
+  doc.setTextColor(196,155,70); doc.setCharSpace(1.2);
+  doc.text('MY TRAVELS — HOLDER INFORMATION', 9, 11);
+  doc.setCharSpace(0);
+  doc.setFont('helvetica','normal'); doc.setFontSize(5);
+  doc.setTextColor(120,95,40); doc.text('P < MYT', W-9, 11, {align:'right'});
+
+  // Photo box with drawn globe
+  doc.setFillColor(210,200,180); doc.setDrawColor(170,155,120);
+  doc.setLineWidth(0.4); doc.rect(9,24,30,38,'FD');
+  drawGlobe(24, 43, 10, [100,85,55], 0.4);
+
+  // Bio fields
+  sectionLabel('Holder', 44, 30);
+  fieldValue('World Traveller', 44, 36, 11);
+  sectionLabel('Document type', 44, 44);
+  fieldValue('Personal Travel Record', 44, 50, 7.5);
+  const dDates = trips.filter(t=>t.dateFrom).map(t=>t.dateFrom).sort();
+  const rDates = trips.filter(t=>t.dateTo).map(t=>t.dateTo).sort();
+  let yr = '—';
+  if (dDates.length) {
+    const y1=new Date(dDates[0]).getFullYear();
+    const y2=rDates.length?new Date(rDates[rDates.length-1]).getFullYear():y1;
+    yr = y1===y2?String(y1):`${y1} – ${y2}`;
+  }
+  sectionLabel('Year range', 44, 56);
+  fieldValue(yr, 44, 62, 7.5);
+
+  doc.setDrawColor(180,165,130); doc.setLineWidth(0.3);
+  doc.line(9,68,W-9,68);
+
+  // Stats grid
+  let totalKm=0, totalDays=0;
+  const countriesSet=new Set(), continentsSet=new Set();
+  let longestKm=0, longestRoute='—';
+  trips.forEach(t => {
+    [t.from,t.to].filter(Boolean).forEach(p=>countriesSet.add(p.toLowerCase()));
+    if(t.dateFrom&&t.dateTo){const d=Math.round((new Date(t.dateTo)-new Date(t.dateFrom))/86400000);if(d>0)totalDays+=d;}
+    const fc=getCoords(t.from),tc=getCoords(t.to);
+    if(fc&&tc){
+      [fc,tc].forEach(c=>continentsSet.add(getContinent(c.lat,c.lng)));
+      const km=Math.round(haversineKm(fc.lat,fc.lng,tc.lat,tc.lng));
+      totalKm+=km;
+      if(km>longestKm){longestKm=km;longestRoute=`${t.from} → ${t.to}`;}
+    }
+  });
+  const statsGrid=[
+    {v:String(trips.length),    l:'Total Flights'},
+    {v:String(countriesSet.size),l:'Destinations'},
+    {v:String(continentsSet.size),l:'Continents'},
+    {v:fmt(totalKm),             l:'KM Flown'},
+    {v:Math.round(totalKm/900)+'h',l:'In Air'},
+    {v:String(totalDays),        l:'Days Away'},
+  ];
+  const cellW=(W-18)/3;
+  statsGrid.forEach((s,i)=>{
+    const col=i%3, row=Math.floor(i/3);
+    const sx=9+col*cellW, sy=76+row*22;
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.setTextColor(13,23,51); doc.text(String(s.v), sx, sy+10);
+    sectionLabel(s.l, sx, sy+16);
+    doc.setDrawColor(180,165,130); doc.setLineWidth(0.25);
+    doc.line(sx, sy+18, sx+cellW-3, sy+18);
+  });
+
+  doc.setDrawColor(180,165,130); doc.setLineWidth(0.3);
+  doc.line(9,122,W-9,122);
+  sectionLabel('Longest Flight', 9, 129);
+  fieldValue(longestKm>0?`${longestRoute}  ·  ${fmt(longestKm)} km`:'—', 9, 136, 7.5);
+
+  // MRZ
+  doc.setFillColor(228,220,205); doc.rect(0,H-20,W,20,'F');
+  doc.setDrawColor(175,160,125); doc.setLineWidth(0.3); doc.line(0,H-20,W,H-20);
+  doc.setFont('courier','normal'); doc.setFontSize(6); doc.setTextColor(80,65,45);
+  doc.text('P<MYTWORLD<TRAVELLER<<<<<<<<<<<<<<<<<<<<<<<', 8, H-12);
+  doc.text('MYT2024001<9AUS850101<<<<<<<<<<<<<<<<<<<0', 8, H-5);
+
+  // ── TRIP PAGES ──
+  getSortedTrips().forEach((t,i)=>{
+    doc.addPage();
+    const [cr,cg,cb]=hexRgb(t.color||PALETTE[0]);
+    const [dr,dg,db]=darkColor(cr,cg,cb);
+
+    doc.setFillColor(244,239,228); doc.rect(0,0,W,H,'F');
+    doc.setFillColor(dr,dg,db); doc.rect(0,0,W,38,'F');
+    doc.setFillColor(cr,cg,cb); doc.rect(0,0,W,2,'F');
+
+    // Page tag
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
+    doc.setTextColor(cr,cg,cb); doc.setCharSpace(1);
+    doc.text(`ENTRY · ${String(i+1).padStart(2,'0')}`, W-8, 9, {align:'right'});
+    doc.setCharSpace(0);
+
+    // Destination
+    doc.setFont('helvetica','bold'); doc.setFontSize(20);
+    doc.setTextColor(255,255,255);
+    const destText = (t.to||'—').length > 16 ? (t.to||'—').substring(0,16)+'…' : (t.to||'—');
+    doc.text(destText, 8, 26);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.setTextColor(cr,cg,cb);
+    doc.text(`${t.from}  →  ${t.to}`, 8, 34);
+
+    // Stamp circle
+    const sx=W-26, sy=70, sr=18;
+    doc.setDrawColor(cr,cg,cb); doc.setLineWidth(1.2);
+    doc.circle(sx,sy,sr,'S');
+    doc.setLineWidth(0.35);
+    doc.setLineDash([1,1.5],0);
+    doc.circle(sx,sy,sr-4,'S');
+    doc.setLineDash([],0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
+    doc.setTextColor(cr,cg,cb); doc.setCharSpace(0.5);
+    const stampCity=(t.to||'').substring(0,10).toUpperCase();
+    doc.text(stampCity, sx, sy-4, {align:'center'});
+    doc.setCharSpace(0);
+    if(t.dateFrom){
+      doc.setFontSize(8); doc.text(String(new Date(t.dateFrom).getFullYear()), sx, sy+4, {align:'center'});
+    }
+    doc.setFontSize(4.5); doc.setCharSpace(0.5);
+    doc.text('ADMITTED', sx, sy+10, {align:'center'});
+    doc.setCharSpace(0);
+
+    // Stats row
+    let y=48;
+    const fc=getCoords(t.from),tc=getCoords(t.to);
+    if(fc&&tc){
+      const km=Math.round(haversineKm(fc.lat,fc.lng,tc.lat,tc.lng));
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      doc.setTextColor(13,23,51); doc.text(fmt(km), 8, y+9);
+      sectionLabel('Kilometres', 8, y+15);
+      doc.setDrawColor(180,165,130); doc.setLineWidth(0.25);
+      doc.line(8,y+17,46,y+17);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      doc.text(formatFlightTime(km), 52, y+9);
+      sectionLabel('Flight Time', 52, y+15);
+      doc.line(52,y+17,90,y+17);
+      y+=26;
+    }
+
+    // Fields
+    function tField(label,value,fy){
+      sectionLabel(label,8,fy);
+      fieldValue(value,8,fy+6,8);
+    }
+    tField('Date of Travel', formatDateRange(t.dateFrom,t.dateTo), y); y+=16;
+    if(t.dateFrom&&t.dateTo){
+      const days=Math.round((new Date(t.dateTo)-new Date(t.dateFrom))/86400000);
+      if(days>0){tField('Duration',`${days} day${days!==1?'s':''}`,y);y+=16;}
+    }
+    if(t.label){tField('Trip Name',t.label,y);y+=16;}
+
+    // Notes
+    if(t.notes&&y<H-35){
+      doc.setFillColor(cr,cg,cb); doc.rect(8,y,1.5,20,'F');
+      doc.setFont('helvetica','italic'); doc.setFontSize(7);
+      doc.setTextColor(58,46,26);
+      const nl=doc.splitTextToSize(`"${t.notes}"`, W-58);
+      nl.slice(0,3).forEach((l,li)=>doc.text(l,12,y+7+li*5.5));
+    }
+
+    // Bottom bar + footer
+    doc.setFillColor(cr,cg,cb); doc.rect(0,H-2.5,W,2.5,'F');
+    doc.setFont('courier','normal'); doc.setFontSize(5.5);
+    doc.setTextColor(140,125,95);
+    doc.text(`MYT · ${(t.from||'').substring(0,3).toUpperCase()} → ${(t.to||'').substring(0,3).toUpperCase()} · ${t.dateFrom||'—'}`, 8, H-7);
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
+    doc.setTextColor(cr,cg,cb); doc.setCharSpace(0.5);
+    doc.text('MY TRAVELS', W-8, H-7, {align:'right'});
+    doc.setCharSpace(0);
+  });
+
+  // ── BACK COVER ──
+  doc.addPage();
+  doc.setFillColor(13,23,51); doc.rect(0,0,W,H,'F');
+  gridPattern();
+  doc.setDrawColor(196,155,70); doc.setLineWidth(0.6);
+  doc.rect(5,5,W-10,H-10,'S');
+  const mid=H/2;
+  doc.setDrawColor(196,155,70); doc.setLineWidth(0.3);
+  doc.line(W/2-32,mid-26,W/2+32,mid-26);
+  doc.setFont('helvetica','normal'); doc.setFontSize(6);
+  doc.setTextColor(100,80,35);
+  ['This document is a personal digital record','of travel history generated by My Travels.','','Not a valid travel document.']
+    .forEach((l,i)=>doc.text(l,W/2,mid-17+i*7,{align:'center'}));
+  doc.line(W/2-32,mid+13,W/2+32,mid+13);
+  drawGlobe(W/2, mid+35, 16, [35,60,110], 0.35);
+  doc.setFont('helvetica','normal'); doc.setFontSize(5.5);
+  doc.setTextColor(75,60,28); doc.setCharSpace(1);
+  doc.text('my-travels.vercel.app', W/2, mid+58, {align:'center'});
+  doc.setCharSpace(0);
+
+  doc.save('my-travels-passport.pdf');
+}
 
 // ─────────────────────────────────────────────
 // LIGHTBOX

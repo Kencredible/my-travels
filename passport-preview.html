@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Passport Design Preview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #1c1c1c;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      padding: 48px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .section-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 12px;
+      align-self: flex-start;
+      margin-left: calc(50% - 212px);
+    }
+
+    /* ── A5 page (148mm × 210mm → 420px × 595px at 72dpi) ── */
+    .page {
+      width: 420px;
+      height: 595px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 24px 72px rgba(0,0,0,0.75), 0 2px 8px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════════════════════
+       COVER
+    ═══════════════════════════════ */
+    .page-cover {
+      background: #0d1733;
+      margin-bottom: 6px;
+    }
+
+    /* Security guilloche-like pattern */
+    .page-cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 22px, rgba(255,255,255,0.018) 22px, rgba(255,255,255,0.018) 23px),
+        repeating-linear-gradient(90deg, transparent, transparent 22px, rgba(255,255,255,0.018) 22px, rgba(255,255,255,0.018) 23px);
+      pointer-events: none;
+    }
+
+    .cover-frame {
+      position: absolute;
+      inset: 12px;
+      border: 1.5px solid rgba(196,155,70,0.45);
+    }
+
+    .cover-frame-inner {
+      position: absolute;
+      inset: 17px;
+      border: 0.5px solid rgba(196,155,70,0.2);
+    }
+
+    /* Corner ornaments */
+    .cover-frame::before, .cover-frame::after,
+    .cover-frame-inner::before, .cover-frame-inner::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: rgba(196,155,70,0.6);
+      border-style: solid;
+    }
+
+    .cover-frame::before  { top: -1px; left: -1px;  border-width: 2px 0 0 2px; }
+    .cover-frame::after   { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+    .cover-frame-inner::before { bottom: -1px; left: -1px;  border-width: 0 0 2px 2px; }
+    .cover-frame-inner::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+    .cover-body {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 40px 32px;
+    }
+
+    .cover-issuer {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7.5px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(196,155,70,0.55);
+      margin-bottom: 28px;
+    }
+
+    .cover-emblem {
+      width: 76px;
+      height: 76px;
+      margin-bottom: 24px;
+      opacity: 0.85;
+    }
+
+    .cover-type {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7px;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: rgba(196,155,70,0.5);
+      margin-bottom: 10px;
+    }
+
+    .cover-title {
+      font-size: 38px;
+      font-weight: normal;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #c49b46;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .cover-divider {
+      width: 140px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(196,155,70,0.4), transparent);
+      margin: 16px 0;
+    }
+
+    .cover-brand {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: rgba(196,155,70,0.5);
+    }
+
+    .cover-bottom {
+      position: absolute;
+      bottom: 36px;
+      left: 0; right: 0;
+      text-align: center;
+    }
+
+    .cover-bottom-line {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6.5px;
+      letter-spacing: 0.3em;
+      color: rgba(196,155,70,0.3);
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════════════════════
+       BIO / STATS PAGE
+    ═══════════════════════════════ */
+    .page-bio {
+      background: #f4efe4;
+      margin-top: 6px;
+      margin-bottom: 56px;
+    }
+
+    .bio-header {
+      background: #0d1733;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+    }
+
+    .bio-header-left {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(196,155,70,0.7);
+    }
+
+    .bio-header-right {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7px;
+      letter-spacing: 0.2em;
+      color: rgba(196,155,70,0.4);
+    }
+
+    .bio-body {
+      padding: 28px 26px 20px;
+    }
+
+    .bio-photo-row {
+      display: flex;
+      gap: 22px;
+      margin-bottom: 24px;
+    }
+
+    .bio-photo {
+      width: 90px;
+      height: 110px;
+      background: #ddd5c0;
+      border: 1px solid #c8b890;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      flex-shrink: 0;
+      color: #8a7a5a;
+    }
+
+    .bio-info {
+      flex: 1;
+      padding-top: 4px;
+    }
+
+    .bio-field {
+      margin-bottom: 12px;
+    }
+
+    .bio-field-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #9a8a6a;
+      margin-bottom: 3px;
+    }
+
+    .bio-field-value {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a1408;
+      letter-spacing: 0.04em;
+    }
+
+    .bio-field-value.large {
+      font-size: 18px;
+    }
+
+    .bio-divider {
+      height: 1px;
+      background: linear-gradient(to right, #c8b890, transparent);
+      margin: 18px 0;
+    }
+
+    .bio-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px 10px;
+      margin-bottom: 20px;
+    }
+
+    .bio-stat {
+      border-bottom: 1px solid #c8b890;
+      padding-bottom: 8px;
+    }
+
+    .bio-stat-value {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0d1733;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .bio-stat-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #9a8a6a;
+    }
+
+    .bio-mrz {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: #ede7d8;
+      padding: 10px 22px 12px;
+      border-top: 1px solid #c8b890;
+    }
+
+    .bio-mrz-line {
+      font-family: 'Courier New', monospace;
+      font-size: 7.5px;
+      letter-spacing: 0.18em;
+      color: #5a4a2a;
+      line-height: 1.8;
+    }
+
+    /* Page edge perforations */
+    .page-bio::after, .page-trip::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      width: 6px;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 10px,
+        #0d1733 10px,
+        #0d1733 12px
+      );
+      opacity: 0.06;
+    }
+
+    /* ═══════════════════════════════
+       TRIP PAGE
+    ═══════════════════════════════ */
+    .page-trip {
+      background: #f4efe4;
+      margin-bottom: 6px;
+    }
+
+    .trip-header {
+      height: 100px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0 22px 14px;
+      overflow: hidden;
+    }
+
+    /* Security pattern overlay on header */
+    .trip-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 3px,
+        rgba(255,255,255,0.07) 3px,
+        rgba(255,255,255,0.07) 4px
+      );
+    }
+
+    .trip-page-no {
+      position: absolute;
+      top: 12px; right: 18px;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7px;
+      letter-spacing: 0.25em;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+    }
+
+    .trip-destination {
+      font-size: 28px;
+      font-weight: normal;
+      letter-spacing: 0.08em;
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .trip-route-tag {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.12em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .trip-body {
+      padding: 18px 22px 0;
+      display: flex;
+      gap: 18px;
+      position: relative;
+    }
+
+    .trip-left {
+      flex: 1;
+    }
+
+    .trip-right {
+      width: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .trip-field {
+      margin-bottom: 14px;
+    }
+
+    .trip-field-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #9a8a6a;
+      margin-bottom: 3px;
+    }
+
+    .trip-field-value {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #1a1408;
+    }
+
+    .trip-field-value.accent { }
+
+    .trip-field-sub {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      color: #7a6a4a;
+      margin-top: 1px;
+    }
+
+    .trip-stats-row {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .trip-stat {
+      border-bottom: 1px solid #c8b890;
+      padding-bottom: 6px;
+      min-width: 72px;
+    }
+
+    .trip-stat-value {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1408;
+      line-height: 1;
+    }
+
+    .trip-stat-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #9a8a6a;
+      margin-top: 3px;
+    }
+
+    /* Visa stamp circle */
+    .stamp {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border-width: 2.5px;
+      border-style: solid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .stamp::before {
+      content: '';
+      position: absolute;
+      inset: 5px;
+      border-radius: 50%;
+      border-width: 1px;
+      border-style: dashed;
+      opacity: 0.5;
+    }
+
+    .stamp-inner {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stamp-icon {
+      font-size: 18px;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .stamp-city {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+
+    .stamp-year {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      margin-top: 3px;
+    }
+
+    .stamp-admitted {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.6;
+      margin-top: 2px;
+    }
+
+    .trip-notes-area {
+      margin: 0 22px;
+      padding: 12px 14px;
+      background: rgba(200,184,144,0.15);
+      border-left: 2px solid;
+      margin-bottom: 0;
+    }
+
+    .trip-notes-label {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #9a8a6a;
+      margin-bottom: 5px;
+    }
+
+    .trip-notes-text {
+      font-family: 'Georgia', serif;
+      font-size: 9.5px;
+      color: #3a2e1a;
+      line-height: 1.65;
+      font-style: italic;
+    }
+
+    .trip-footer {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      border-top: 1px solid;
+    }
+
+    .trip-footer-left {
+      font-family: 'Courier New', monospace;
+      font-size: 6.5px;
+      letter-spacing: 0.12em;
+    }
+
+    .trip-footer-right {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 6.5px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════════════════════
+       BACK COVER
+    ═══════════════════════════════ */
+    .page-back {
+      background: #0d1733;
+      margin-top: 6px;
+    }
+
+    .back-body {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 40px;
+    }
+
+    .back-line {
+      width: 180px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(196,155,70,0.35), transparent);
+    }
+
+    .back-text {
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 7.5px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: rgba(196,155,70,0.4);
+      text-align: center;
+      line-height: 2;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .controls button {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #aaa;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'Segoe UI', sans-serif;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .controls button:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+    .spread {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 48px;
+    }
+
+    .spread .page {
+      box-shadow: 4px 0 16px rgba(0,0,0,0.4), -4px 0 16px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<div class="controls">
+  <button onclick="document.body.style.background=document.body.style.background===#f0f0f0?'#1c1c1c':'#f0f0f0'">Toggle background</button>
+</div>
+
+<!-- ─── COVER ─── -->
+<div class="section-label">Front cover</div>
+<div class="page page-cover">
+  <div class="cover-frame"></div>
+  <div class="cover-frame-inner"></div>
+  <div class="cover-body">
+    <div class="cover-issuer">Personal Travel Document</div>
+
+    <!-- Emblem SVG -->
+    <svg class="cover-emblem" viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="38" cy="38" r="34" stroke="#c49b46" stroke-width="1.5" opacity="0.6"/>
+      <circle cx="38" cy="38" r="28" stroke="#c49b46" stroke-width="0.5" opacity="0.35"/>
+      <!-- Globe lines -->
+      <ellipse cx="38" cy="38" rx="14" ry="28" stroke="#c49b46" stroke-width="0.8" opacity="0.5"/>
+      <ellipse cx="38" cy="38" rx="28" ry="12" stroke="#c49b46" stroke-width="0.8" opacity="0.5"/>
+      <line x1="10" y1="38" x2="66" y2="38" stroke="#c49b46" stroke-width="0.8" opacity="0.5"/>
+      <line x1="38" y1="10" x2="38" y2="66" stroke="#c49b46" stroke-width="0.8" opacity="0.5"/>
+      <!-- Plane -->
+      <g transform="translate(38,38) rotate(-45) translate(-8,-5)">
+        <path d="M8 1 L14 5 L8 9 L6 7 L10 5 L6 3 Z" fill="#c49b46" opacity="0.9"/>
+        <path d="M4 4 L6 5 L4 6 Z" fill="#c49b46" opacity="0.7"/>
+        <path d="M2 7 L5 8 L4 9 Z" fill="#c49b46" opacity="0.5"/>
+      </g>
+    </svg>
+
+    <div class="cover-type">Travel Document</div>
+    <div class="cover-title">Passport</div>
+    <div class="cover-divider"></div>
+    <div class="cover-brand">✈ My Travels</div>
+  </div>
+
+  <div class="cover-bottom">
+    <div class="cover-bottom-line">Personal · Non-Transferable · Digital Record</div>
+  </div>
+</div>
+
+<!-- ─── BIO SPREAD ─── -->
+<div class="section-label">Inside spread — Bio / stats page</div>
+<div class="spread">
+
+  <!-- Left page (inside cover, blank) -->
+  <div class="page" style="background:#0d1733; width:420px; height:595px; box-shadow:4px 0 16px rgba(0,0,0,0.5);">
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.08;">
+      <svg width="200" height="200" viewBox="0 0 76 76" fill="none">
+        <circle cx="38" cy="38" r="34" stroke="#c49b46" stroke-width="1"/>
+        <ellipse cx="38" cy="38" rx="14" ry="28" stroke="#c49b46" stroke-width="0.6"/>
+        <ellipse cx="38" cy="38" rx="28" ry="12" stroke="#c49b46" stroke-width="0.6"/>
+        <line x1="10" y1="38" x2="66" y2="38" stroke="#c49b46" stroke-width="0.6"/>
+        <line x1="38" y1="10" x2="38" y2="66" stroke="#c49b46" stroke-width="0.6"/>
+      </svg>
+    </div>
+    <div style="position:absolute;bottom:28px;left:0;right:0;text-align:center;font-family:'Segoe UI',sans-serif;font-size:6.5px;letter-spacing:0.3em;color:rgba(196,155,70,0.25);text-transform:uppercase;">My Travels · Personal Record</div>
+  </div>
+
+  <!-- Right page — data / bio page -->
+  <div class="page page-bio" style="width:420px;">
+    <div class="bio-header">
+      <div class="bio-header-left">✈ My Travels — Holder Information</div>
+      <div class="bio-header-right">P &lt; MYT</div>
+    </div>
+
+    <div class="bio-body">
+      <div class="bio-photo-row">
+        <div class="bio-photo">🌍</div>
+        <div class="bio-info">
+          <div class="bio-field">
+            <div class="bio-field-label">Holder</div>
+            <div class="bio-field-value large">World Traveller</div>
+          </div>
+          <div class="bio-field">
+            <div class="bio-field-label">Document type</div>
+            <div class="bio-field-value">Personal Travel Record</div>
+          </div>
+          <div class="bio-field">
+            <div class="bio-field-label">Year range</div>
+            <div class="bio-field-value">2022 – 2024</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bio-divider"></div>
+
+      <div class="bio-stats-grid">
+        <div class="bio-stat">
+          <div class="bio-stat-value">12</div>
+          <div class="bio-stat-label">Total Flights</div>
+        </div>
+        <div class="bio-stat">
+          <div class="bio-stat-value">9</div>
+          <div class="bio-stat-label">Countries</div>
+        </div>
+        <div class="bio-stat">
+          <div class="bio-stat-value">5</div>
+          <div class="bio-stat-label">Continents</div>
+        </div>
+        <div class="bio-stat">
+          <div class="bio-stat-value">87k</div>
+          <div class="bio-stat-label">KM Flown</div>
+        </div>
+        <div class="bio-stat">
+          <div class="bio-stat-value">96h</div>
+          <div class="bio-stat-label">In Air</div>
+        </div>
+        <div class="bio-stat">
+          <div class="bio-stat-value">142</div>
+          <div class="bio-stat-label">Days Away</div>
+        </div>
+      </div>
+
+      <div class="bio-divider"></div>
+
+      <div class="bio-field">
+        <div class="bio-field-label">Longest flight</div>
+        <div class="bio-field-value">Auckland → London &nbsp;·&nbsp; 18,327 km</div>
+      </div>
+    </div>
+
+    <div class="bio-mrz">
+      <div class="bio-mrz-line">P&lt;MYTWORLD&lt;TRAVELLER&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+      <div class="bio-mrz-line">MYT2024001&lt;9AUS8501011M2412319&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;4</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── TRIP PAGE 1 ─── -->
+<div class="section-label">Trip stamp — Auckland → London</div>
+<div class="page page-trip" style="margin-bottom:6px;">
+
+  <div class="trip-header" style="background: linear-gradient(135deg, #1a3a6e 0%, #2563eb 100%);">
+    <div class="trip-page-no">Entry · 01</div>
+    <div class="trip-destination">London</div>
+    <div class="trip-route-tag">Auckland &nbsp;→&nbsp; London, United Kingdom</div>
+  </div>
+
+  <div class="trip-body">
+    <div class="trip-left">
+      <div class="trip-stats-row">
+        <div class="trip-stat">
+          <div class="trip-stat-value" style="color:#2563eb">18,327</div>
+          <div class="trip-stat-label">Kilometres</div>
+        </div>
+        <div class="trip-stat">
+          <div class="trip-stat-value" style="color:#2563eb">~20h 20m</div>
+          <div class="trip-stat-label">Flight time</div>
+        </div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Date of travel</div>
+        <div class="trip-field-value">14 Jan 2024 – 28 Jan 2024</div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Duration</div>
+        <div class="trip-field-value">14 days</div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Trip name</div>
+        <div class="trip-field-value" style="color:#2563eb">Winter in London</div>
+      </div>
+    </div>
+
+    <div class="trip-right">
+      <div class="stamp" style="border-color:#2563eb; color:#2563eb;">
+        <div style="position:absolute;inset:5px;border-radius:50%;border:1px dashed #2563eb;opacity:0.4;"></div>
+        <div class="stamp-inner">
+          <div class="stamp-icon">✈</div>
+          <div class="stamp-city" style="color:#2563eb">LONDON<br>GBR</div>
+          <div class="stamp-year" style="color:#2563eb">2024</div>
+          <div class="stamp-admitted" style="color:#2563eb">admitted</div>
+        </div>
+      </div>
+      <div style="font-family:'Segoe UI',sans-serif;font-size:6px;letter-spacing:0.15em;color:#9a8a6a;text-align:center;text-transform:uppercase;line-height:1.8;">
+        11,385 mi<br>GMT+0
+      </div>
+    </div>
+  </div>
+
+  <div class="trip-notes-area" style="border-color:#2563eb; margin-top:14px;">
+    <div class="trip-notes-label">Notes & Memories</div>
+    <div class="trip-notes-text">"Visited the Tower of London and Borough Market. Freezing cold but the pubs made up for it. Best fish and chips of my life near Waterloo Bridge."</div>
+  </div>
+
+  <div class="trip-footer" style="border-color:rgba(37,99,235,0.2); color:#9a8a6a;">
+    <div class="trip-footer-left">MYT · AKL → LHR · 2024-01-14</div>
+    <div class="trip-footer-right" style="color:#2563eb;">✈ My Travels</div>
+  </div>
+</div>
+
+<!-- ─── TRIP PAGE 2 ─── -->
+<div class="section-label">Trip stamp — London → Tokyo</div>
+<div class="page page-trip" style="margin-bottom:6px;">
+
+  <div class="trip-header" style="background: linear-gradient(135deg, #064e3b 0%, #10b981 100%);">
+    <div class="trip-page-no">Entry · 02</div>
+    <div class="trip-destination">Tokyo</div>
+    <div class="trip-route-tag">London, United Kingdom &nbsp;→&nbsp; Tokyo, Japan</div>
+  </div>
+
+  <div class="trip-body">
+    <div class="trip-left">
+      <div class="trip-stats-row">
+        <div class="trip-stat">
+          <div class="trip-stat-value" style="color:#10b981">9,560</div>
+          <div class="trip-stat-label">Kilometres</div>
+        </div>
+        <div class="trip-stat">
+          <div class="trip-stat-value" style="color:#10b981">~10h 37m</div>
+          <div class="trip-stat-label">Flight time</div>
+        </div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Date of travel</div>
+        <div class="trip-field-value">8 Mar 2024 – 18 Mar 2024</div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Duration</div>
+        <div class="trip-field-value">10 days</div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Trip name</div>
+        <div class="trip-field-value" style="color:#10b981">Cherry Blossom Season</div>
+      </div>
+    </div>
+
+    <div class="trip-right">
+      <div class="stamp" style="border-color:#10b981; color:#10b981;">
+        <div style="position:absolute;inset:5px;border-radius:50%;border:1px dashed #10b981;opacity:0.4;"></div>
+        <div class="stamp-inner">
+          <div class="stamp-icon">🌸</div>
+          <div class="stamp-city" style="color:#10b981">TOKYO<br>JPN</div>
+          <div class="stamp-year" style="color:#10b981">2024</div>
+          <div class="stamp-admitted" style="color:#10b981">admitted</div>
+        </div>
+      </div>
+      <div style="font-family:'Segoe UI',sans-serif;font-size:6px;letter-spacing:0.15em;color:#9a8a6a;text-align:center;text-transform:uppercase;line-height:1.8;">
+        5,940 mi<br>JST+9
+      </div>
+    </div>
+  </div>
+
+  <div class="trip-notes-area" style="border-color:#10b981; margin-top:14px;">
+    <div class="trip-notes-label">Notes & Memories</div>
+    <div class="trip-notes-text">"Caught the tail end of cherry blossom season in Shinjuku Gyoen. The ramen in Shibuya was incredible. Took the shinkansen to Kyoto for a day — worth every yen."</div>
+  </div>
+
+  <div class="trip-footer" style="border-color:rgba(16,185,129,0.2); color:#9a8a6a;">
+    <div class="trip-footer-left">MYT · LHR → NRT · 2024-03-08</div>
+    <div class="trip-footer-right" style="color:#10b981;">✈ My Travels</div>
+  </div>
+</div>
+
+<!-- ─── TRIP PAGE 3 ─── -->
+<div class="section-label">Trip stamp — Tokyo → Bali</div>
+<div class="page page-trip" style="margin-bottom:56px;">
+
+  <div class="trip-header" style="background: linear-gradient(135deg, #7c2d12 0%, #f97316 100%);">
+    <div class="trip-page-no">Entry · 03</div>
+    <div class="trip-destination">Bali</div>
+    <div class="trip-route-tag">Tokyo, Japan &nbsp;→&nbsp; Bali, Indonesia</div>
+  </div>
+
+  <div class="trip-body">
+    <div class="trip-left">
+      <div class="trip-stats-row">
+        <div class="trip-stat">
+          <div class="trip-stat-value" style="color:#f97316">5,771</div>
+          <div class="trip-stat-label">Kilometres</div>
+        </div>
+        <div class="trip-stat">
+          <div class="trip-stat-value" style="color:#f97316">~6h 25m</div>
+          <div class="trip-stat-label">Flight time</div>
+        </div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Date of travel</div>
+        <div class="trip-field-value">22 Apr 2024 – 29 Apr 2024</div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Duration</div>
+        <div class="trip-field-value">7 days</div>
+      </div>
+
+      <div class="trip-field">
+        <div class="trip-field-label">Trip name</div>
+        <div class="trip-field-value" style="color:#f97316">Rice Terraces & Temples</div>
+      </div>
+    </div>
+
+    <div class="trip-right">
+      <div class="stamp" style="border-color:#f97316; color:#f97316;">
+        <div style="position:absolute;inset:5px;border-radius:50%;border:1px dashed #f97316;opacity:0.4;"></div>
+        <div class="stamp-inner">
+          <div class="stamp-icon">🌴</div>
+          <div class="stamp-city" style="color:#f97316">BALI<br>IDN</div>
+          <div class="stamp-year" style="color:#f97316">2024</div>
+          <div class="stamp-admitted" style="color:#f97316">admitted</div>
+        </div>
+      </div>
+      <div style="font-family:'Segoe UI',sans-serif;font-size:6px;letter-spacing:0.15em;color:#9a8a6a;text-align:center;text-transform:uppercase;line-height:1.8;">
+        3,585 mi<br>WITA+8
+      </div>
+    </div>
+  </div>
+
+  <div class="trip-notes-area" style="border-color:#f97316; margin-top:14px;">
+    <div class="trip-notes-label">Notes & Memories</div>
+    <div class="trip-notes-text">"Tegalalang rice terraces at sunrise. Found a tiny warung in Ubud that changed my life. The Uluwatu cliff temple at sunset — genuinely breathtaking."</div>
+  </div>
+
+  <div class="trip-footer" style="border-color:rgba(249,115,22,0.2); color:#9a8a6a;">
+    <div class="trip-footer-left">MYT · NRT → DPS · 2024-04-22</div>
+    <div class="trip-footer-right" style="color:#f97316;">✈ My Travels</div>
+  </div>
+</div>
+
+<!-- ─── BACK COVER ─── -->
+<div class="section-label">Back cover</div>
+<div class="page page-back">
+  <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 22px,rgba(255,255,255,0.018) 22px,rgba(255,255,255,0.018) 23px),repeating-linear-gradient(90deg,transparent,transparent 22px,rgba(255,255,255,0.018) 22px,rgba(255,255,255,0.018) 23px);"></div>
+  <div class="cover-frame" style="position:absolute;inset:12px;border:1.5px solid rgba(196,155,70,0.35);"></div>
+  <div class="back-body">
+    <div class="back-line"></div>
+    <div class="back-text">
+      This document is a personal digital record<br>
+      of travel history generated by My Travels.<br>
+      <br>
+      Not a valid travel document.
+    </div>
+    <div class="back-line"></div>
+    <svg width="48" height="48" viewBox="0 0 76 76" fill="none" style="opacity:0.2;margin:8px 0;">
+      <circle cx="38" cy="38" r="34" stroke="#c49b46" stroke-width="1.5"/>
+      <ellipse cx="38" cy="38" rx="14" ry="28" stroke="#c49b46" stroke-width="0.8"/>
+      <ellipse cx="38" cy="38" rx="28" ry="12" stroke="#c49b46" stroke-width="0.8"/>
+      <line x1="10" y1="38" x2="66" y2="38" stroke="#c49b46" stroke-width="0.8"/>
+      <line x1="38" y1="10" x2="38" y2="66" stroke="#c49b46" stroke-width="0.8"/>
+    </svg>
+    <div class="back-text">✈ my-travels.vercel.app</div>
+  </div>
+</div>
+
+</body>
+</html>
